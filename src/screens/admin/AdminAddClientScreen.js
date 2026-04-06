@@ -116,10 +116,7 @@ export default function AdminAddClientScreen({ navigation, route }) {
           label="Usage"
           options={CLIENT_TYPES}
           value={form.usage}
-          onChange={(v) => {
-            const label = CLIENT_TYPES.find((t) => t.value === v)?.label || v;
-            updateField('usage', label);
-          }}
+          onChange={(v) => updateField('usage', v)}
         />
         <FormInput
           label="Puissance (kW)"

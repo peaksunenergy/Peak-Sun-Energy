@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { COLORS } from '../constants/colors';
 
 export function FormInput({ label, error, ...props }) {
@@ -21,25 +21,29 @@ export function FormPicker({ label, options, value, onChange, error }) {
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.pickerRow}>
-        {options.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.pickerOption,
-              value === option.value && styles.pickerOptionActive,
-            ]}
-            onPress={() => onChange(option.value)}
-          >
-            <Text
+        {options.map((option) => {
+          const isActive = value === option.value || value === option.label;
+          return (
+            <Pressable
+              key={option.value}
               style={[
-                styles.pickerText,
-                value === option.value && styles.pickerTextActive,
+                styles.pickerOption,
+                isActive && styles.pickerOptionActive,
+                Platform.OS === 'web' && { cursor: 'pointer' },
               ]}
+              onPress={() => onChange(option.value)}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.pickerText,
+                  isActive && styles.pickerTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
