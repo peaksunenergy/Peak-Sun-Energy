@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Alert, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet, Platform } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { CLIENT_TYPES, INSTALLATION_STATES } from '../../constants/config';
 import { addClient, updateClient } from '../../services/api';
 import { FormInput, FormPicker, FormButton } from '../../components/FormElements';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 export default function AdminAddClientScreen({ navigation, route }) {
   const existingClient = route.params?.client;
@@ -24,6 +25,7 @@ export default function AdminAddClientScreen({ navigation, route }) {
     remark: existingClient?.remark || '',
   });
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -31,12 +33,12 @@ export default function AdminAddClientScreen({ navigation, route }) {
 
   async function handleSubmit() {
     if (!form.firstName || !form.lastName || !form.phone || !form.location) {
-      Alert.alert('Erreur', 'Veuillez remplir les champs obligatoires.');
+      toast('Veuillez remplir les champs obligatoires.', 'error');
       return;
     }
 
     if (!isEdit && (!form.login || !form.password)) {
-      Alert.alert('Erreur', 'Le login et le mot de passe sont requis pour un nouveau client.');
+      toast('Le login et le mot de passe sont requis.', 'error');
       return;
     }
 
@@ -44,17 +46,15 @@ export default function AdminAddClientScreen({ navigation, route }) {
     try {
       if (isEdit) {
         await updateClient(existingClient.id, form);
-        Alert.alert('Succès', 'Client modifié avec succès.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        toast('Client modifié avec succès.');
+        navigation.goBack();
       } else {
         await addClient(form);
-        Alert.alert('Succès', 'Client ajouté avec succès. Les identifiants sont prêts.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        toast('Client ajouté avec succès.');
+        navigation.goBack();
       }
     } catch (e) {
-      Alert.alert('Erreur', e.message);
+      toast(e.message, 'error');
     } finally {
       setLoading(false);
     }

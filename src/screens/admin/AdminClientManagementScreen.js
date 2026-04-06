@@ -15,10 +15,12 @@ import { COLORS, SHADOWS } from '../../constants/colors';
 import { getClients, deleteClient } from '../../services/api';
 import { InstallationStatusBadge } from '../../components/StatusBadge';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 export default function AdminClientManagementScreen({ navigation }) {
   const [clients, setClients] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const toast = useToast();
 
   const loadClients = useCallback(async () => {
     const data = await getClients();
@@ -42,18 +44,9 @@ export default function AdminClientManagementScreen({ navigation }) {
       try {
         await deleteClient(client.id);
         setClients(prev => prev.filter(c => c.id !== client.id));
-        if (Platform.OS === 'web') {
-          window.alert('Client supprimé avec succès');
-        } else {
-          Alert.alert('Supprimé', 'Client supprimé avec succès');
-        }
+        toast('Client supprimé avec succès');
       } catch (e) {
-        const msg = e.message || 'Impossible de supprimer le client';
-        if (Platform.OS === 'web') {
-          window.alert(msg);
-        } else {
-          Alert.alert('Erreur', msg);
-        }
+        toast(e.message || 'Impossible de supprimer le client', 'error');
       }
     };
 

@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, Alert, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { validateContactForm } from '../utils/validators';
 import { submitContactMessage } from '../services/api';
 import { FormInput, FormButton } from '../components/FormElements';
 import Header from '../components/Header';
+import { useToast } from '../components/Toast';
 
 export default function ContactScreen({ navigation }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -32,13 +34,10 @@ export default function ContactScreen({ navigation }) {
     setLoading(true);
     try {
       await submitContactMessage(form);
-      Alert.alert(
-        'Message envoyé ✓',
-        'Votre message a été envoyé avec succès. Nous vous répondrons dans les plus brefs délais.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      toast('Message envoyé avec succès ✓');
+      navigation.goBack();
     } catch (e) {
-      Alert.alert('Erreur', "Impossible d'envoyer le message.");
+      toast("Impossible d'envoyer le message.", 'error');
     } finally {
       setLoading(false);
     }

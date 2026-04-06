@@ -3,7 +3,6 @@ import {
   ScrollView,
   View,
   Text,
-  Alert,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { validateQuoteForm } from '../utils/validators';
 import { submitQuoteRequest } from '../services/api';
 import { FormInput, FormPicker, FormButton } from '../components/FormElements';
 import Header from '../components/Header';
+import { useToast } from '../components/Toast';
 
 export default function QuoteRequestScreen({ navigation }) {
   const [form, setForm] = useState({
@@ -31,6 +31,7 @@ export default function QuoteRequestScreen({ navigation }) {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -63,13 +64,10 @@ export default function QuoteRequestScreen({ navigation }) {
     setLoading(true);
     try {
       await submitQuoteRequest(form);
-      Alert.alert(
-        'Demande envoyée ✓',
-        'Votre demande de devis a été envoyée avec succès. Nous vous contacterons prochainement.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      toast('Demande de devis envoyée avec succès ✓');
+      navigation.goBack();
     } catch (e) {
-      Alert.alert('Erreur', "Impossible d'envoyer la demande.");
+      toast("Impossible d'envoyer la demande.", 'error');
     } finally {
       setLoading(false);
     }

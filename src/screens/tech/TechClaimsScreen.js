@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Alert, Modal, TextInput,
-  StyleSheet, RefreshControl, ScrollView,
+  StyleSheet, RefreshControl, ScrollView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import {
 } from '../../services/api';
 import { ClaimStatusBadge } from '../../components/StatusBadge';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 export default function TechClaimsScreen({ navigation }) {
   const { user } = useAuth();
@@ -31,6 +32,7 @@ export default function TechClaimsScreen({ navigation }) {
   const [historyModal, setHistoryModal] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyClaimId, setHistoryClaimId] = useState(null);
+  const toast = useToast();
 
   const loadClaims = useCallback(async () => {
     if (!user) return;
@@ -57,22 +59,25 @@ export default function TechClaimsScreen({ navigation }) {
     const next = nextStates[claim.status];
     if (!next) return;
 
-    Alert.alert('Changer le statut', `${next.label} ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Confirmer',
-        onPress: async () => {
-          try {
-            const note = claim.status === 'resolved' ? 'Réouverte par le technicien' : undefined;
-            await updateClaimStatus(claim.id, next.value, note);
-            Alert.alert('Succès', next.label + ' ✓');
-            loadClaims();
-          } catch (e) {
-            Alert.alert('Erreur', e.message || 'Impossible de changer le statut');
-          }
-        },
-      },
-    ]);
+    const doChange = async () => {
+      try {
+        const note = claim.status === 'resolved' ? 'Réouverte par le technicien' : undefined;
+        await updateClaimStatus(claim.id, next.value, note);
+        toast(next.label + ' ✓');
+        loadClaims();
+      } catch (e) {
+        toast(e.message || 'Impossible de changer le statut', 'error');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${next.label} ?`)) doChange();
+    } else {
+      Alert.alert('Changer le statut', `${next.label} ?`, [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Confirmer', onPress: doChange },
+      ]);
+    }
   }
 
   async function openForwardModal(claimId) {
@@ -86,7 +91,7 @@ export default function TechClaimsScreen({ navigation }) {
   async function handleForward(tech) {
     await forwardClaim(forwardClaimId, tech.id, `${tech.firstName} ${tech.lastName}`, forwardReason);
     setForwardModal(false);
-    Alert.alert('Transféré', `Réclamation transférée à ${tech.firstName} ${tech.lastName}`);
+    toast(`Réclamation transférée à ${tech.firstName} ${tech.lastName}`);
     loadClaims();
   }
 

@@ -21,11 +21,13 @@ import {
 } from '../../services/api';
 import { ClaimStatusBadge } from '../../components/StatusBadge';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 export default function AdminClaimManagementScreen({ navigation }) {
   const [claims, setClaims] = useState([]);
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+  const toast = useToast();
 
   // Assign modal
   const [assignModal, setAssignModal] = useState(false);
@@ -58,19 +60,10 @@ export default function AdminClaimManagementScreen({ navigation }) {
     const doReopen = async () => {
       try {
         await updateClaimStatus(claim.id, 'in_progress', 'Réouverte par l\'admin');
-        if (Platform.OS === 'web') {
-          window.alert('Réclamation réouverte');
-        } else {
-          Alert.alert('Succès', 'Réclamation réouverte');
-        }
+        toast('Réclamation réouverte');
         loadClaims();
       } catch (e) {
-        const msg = e.message || 'Impossible de réouvrir';
-        if (Platform.OS === 'web') {
-          window.alert(msg);
-        } else {
-          Alert.alert('Erreur', msg);
-        }
+        toast(e.message || 'Impossible de réouvrir', 'error');
       }
     };
 
@@ -96,7 +89,7 @@ export default function AdminClaimManagementScreen({ navigation }) {
   async function handleAssign(tech) {
     await assignClaim(assignClaimId, tech.id, `${tech.firstName} ${tech.lastName}`);
     setAssignModal(false);
-    Alert.alert('Assigné', `Réclamation assignée à ${tech.firstName} ${tech.lastName}`);
+    toast(`Réclamation assignée à ${tech.firstName} ${tech.lastName}`);
     loadClaims();
   }
 

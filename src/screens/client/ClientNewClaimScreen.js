@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
@@ -9,6 +9,7 @@ import { submitClaim } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { FormInput, FormPicker, FormButton } from '../../components/FormElements';
 import Header from '../../components/Header';
+import { useToast } from '../../components/Toast';
 
 export default function ClientNewClaimScreen({ navigation }) {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export default function ClientNewClaimScreen({ navigation }) {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -55,13 +57,10 @@ export default function ClientNewClaimScreen({ navigation }) {
         clientId: user.id,
         clientName: `${user.firstName} ${user.lastName}`,
       });
-      Alert.alert(
-        'Réclamation envoyée ✓',
-        'Votre réclamation a été transmise. Vous pouvez suivre son état depuis votre espace.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      toast('Réclamation envoyée avec succès ✓');
+      navigation.goBack();
     } catch (e) {
-      Alert.alert('Erreur', "Impossible d'envoyer la réclamation.");
+      toast("Impossible d'envoyer la réclamation.", 'error');
     } finally {
       setLoading(false);
     }

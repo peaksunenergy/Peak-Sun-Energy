@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { FormInput, FormButton } from '../components/FormElements';
 import Header from '../components/Header';
+import { useToast } from '../components/Toast';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function handleLogin() {
     if (!loginId.trim() || !password.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+      toast('Veuillez remplir tous les champs.', 'error');
       return;
     }
 
@@ -23,7 +25,7 @@ export default function LoginScreen({ navigation }) {
       await login(loginId.trim(), password);
       // La navigation sera gérée automatiquement par le navigateur
     } catch (e) {
-      Alert.alert('Erreur de connexion', e.message);
+      toast(e.message, 'error');
     } finally {
       setLoading(false);
     }
