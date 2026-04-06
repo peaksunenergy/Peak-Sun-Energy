@@ -1,13 +1,18 @@
 const express = require('express');
-const pool = require('../db/pool');
+const supabase = require('../db/pool');
 
 const router = express.Router();
 
 // GET /api/quotes
 router.get('/', async (_req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM quote_requests ORDER BY created_at DESC');
-    res.json(result.rows.map(formatQuote));
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data.map(formatQuote));
   } catch (err) {
     console.error('Get quotes error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -18,12 +23,14 @@ router.get('/', async (_req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { fullName, email, phone, clientType, message } = req.body;
-    const result = await pool.query(
-      `INSERT INTO quote_requests (full_name, email, phone, client_type, message, status)
-       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`,
-      [fullName, email, phone, clientType, message]
-    );
-    res.status(201).json(formatQuote(result.rows[0]));
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .insert({ full_name: fullName, email, phone, client_type: clientType, message, status: 'pending' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(formatQuote(data));
   } catch (err) {
     console.error('Submit quote error:', err);
     res.status(500).json({ error: 'Erreur serveur' });

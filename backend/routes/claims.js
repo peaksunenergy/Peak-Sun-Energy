@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../db/pool');
+const supabase = require('../db/pool');
 
 const router = express.Router();
 const CLAIM_ALERT_DELAY_MS = 48 * 60 * 60 * 1000;
@@ -7,8 +7,13 @@ const CLAIM_ALERT_DELAY_MS = 48 * 60 * 60 * 1000;
 // GET /api/claims
 router.get('/', async (_req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM claims ORDER BY created_at DESC');
-    res.json(result.rows.map(formatClaim));
+    const { data, error } = await supabase
+      .from('claims')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data.map(formatClaim));
   } catch (err) {
     console.error('Get claims error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -18,11 +23,14 @@ router.get('/', async (_req, res) => {
 // GET /api/claims/client/:clientId
 router.get('/client/:clientId', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM claims WHERE client_id=$1 ORDER BY created_at DESC',
-      [req.params.clientId]
-    );
-    res.json(result.rows.map(formatClaim));
+    const { data, error } = await supabase
+      .from('claims')
+      .select('*')
+      .eq('client_id', req.params.clientId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data.map(formatClaim));
   } catch (err) {
     console.error('Get client claims error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -33,23 +41,22 @@ router.get('/client/:clientId', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { clientId, clientName, type, description, photoUri } = req.body;
-    const result = await pool.query(
-      `INSERT INTO claims (client_id, client_name, type, description, photo_uri, status)
-       VALUES ($1, $2, $3, $4, $5, 'created') RETURNING *`,
-      [clientId, clientName, type, description, photoUri]
-    );
-    const claim = formatClaim(result.rows[0]);
+    const { data: claim, error } = await supabase
+      .from('claims')
+      .insert({ client_id: clientId, client_name: clientName, type, description, photo_uri: photoUri, status: 'created' })
+      .select()
+      .single();
+
+    if (error) throw error;
 
     // Add notification
     const forRoles = type === 'technical' ? ['technician', 'admin'] : ['admin'];
     const typeLabel = type === 'technical' ? 'technique' : 'administrative';
-    await pool.query(
-      `INSERT INTO notifications (type, claim_id, message, for_roles)
-       VALUES ('new_claim', $1, $2, $3)`,
-      [claim.id, `Nouvelle réclamation ${typeLabel} de ${clientName}`, forRoles]
-    );
+    await supabase
+      .from('notifications')
+      .insert({ type: 'new_claim', claim_id: claim.id, message: `Nouvelle réclamation ${typeLabel} de ${clientName}`, for_roles: forRoles });
 
-    res.status(201).json(claim);
+    res.status(201).json(formatClaim(claim));
   } catch (err) {
     console.error('Submit claim error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -60,14 +67,17 @@ router.post('/', async (req, res) => {
 router.put('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    const result = await pool.query(
-      `UPDATE claims SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
-      [status, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Réclamation non trouvée' });
-    }
-    res.json(formatClaim(result.rows[0]));
+    const { data: claim, error } = await supabase
+      .from('claims')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!claim) return res.status(404).json({ error: 'Réclamation non trouvée' });
+
+    res.json(formatClaim(claim));
   } catch (err) {
     console.error('Update claim status error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -77,21 +87,28 @@ router.put('/:id/status', async (req, res) => {
 // GET /api/claims/overdue
 router.get('/overdue', async (_req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT * FROM claims
-       WHERE status='created' AND type='technical'
-         AND created_at < NOW() - INTERVAL '${CLAIM_ALERT_DELAY_MS} milliseconds'`
-    );
+    const cutoff = new Date(Date.now() - CLAIM_ALERT_DELAY_MS).toISOString();
+    const { data, error } = await supabase
+      .from('claims')
+      .select('*')
+      .eq('status', 'created')
+      .eq('type', 'technical')
+      .lt('created_at', cutoff);
 
-    for (const claim of result.rows) {
-      await pool.query(
-        `INSERT INTO notifications (type, claim_id, message, for_roles)
-         VALUES ('overdue_claim', $1, $2, $3)`,
-        [claim.id, `⚠️ Réclamation #${claim.id} non traitée depuis plus de 48h`, ['admin']]
-      );
+    if (error) throw error;
+
+    for (const claim of data) {
+      await supabase
+        .from('notifications')
+        .insert({
+          type: 'overdue_claim',
+          claim_id: claim.id,
+          message: `⚠️ Réclamation #${claim.id} non traitée depuis plus de 48h`,
+          for_roles: ['admin'],
+        });
     }
 
-    res.json(result.rows.map(formatClaim));
+    res.json(data.map(formatClaim));
   } catch (err) {
     console.error('Check overdue error:', err);
     res.status(500).json({ error: 'Erreur serveur' });

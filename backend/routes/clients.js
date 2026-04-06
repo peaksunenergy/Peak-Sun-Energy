@@ -1,20 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const pool = require('../db/pool');
+const supabase = require('../db/pool');
 
 const router = express.Router();
 
 // GET /api/clients
 router.get('/', async (_req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT c.*, u.login, u.first_name, u.last_name
-      FROM clients c
-      JOIN users u ON c.user_id = u.id
-      ORDER BY c.created_at DESC
-    `);
-    const clients = result.rows.map(formatClient);
-    res.json(clients);
+    const { data: clients, error } = await supabase
+      .from('clients')
+      .select('*, users(login, first_name, last_name)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json(clients.map(c => formatClient({ ...c, ...c.users })));
   } catch (err) {
     console.error('Get clients error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -23,36 +23,35 @@ router.get('/', async (_req, res) => {
 
 // POST /api/clients
 router.post('/', async (req, res) => {
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
     const { login, password, firstName, lastName, phone, location, usage, power, characteristics, remark } = req.body;
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const userResult = await client.query(
-      `INSERT INTO users (login, password_hash, role, first_name, last_name)
-       VALUES ($1, $2, 'client', $3, $4) RETURNING id`,
-      [login, passwordHash, firstName, lastName]
-    );
-    const userId = userResult.rows[0].id;
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .insert({ login, password_hash: passwordHash, role: 'client', first_name: firstName, last_name: lastName })
+      .select()
+      .single();
 
-    const clientResult = await client.query(
-      `INSERT INTO clients (user_id, phone, location, usage, power, characteristics, state, remark)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING *`,
-      [userId, phone, location, usage, power, characteristics, remark]
-    );
-
-    await client.query('COMMIT');
-    res.status(201).json(formatClient({ ...clientResult.rows[0], login, first_name: firstName, last_name: lastName }));
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Add client error:', err);
-    if (err.code === '23505') {
-      return res.status(409).json({ error: 'Ce login existe déjà' });
+    if (userError) {
+      if (userError.code === '23505') {
+        return res.status(409).json({ error: 'Ce login existe déjà' });
+      }
+      throw userError;
     }
+
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .insert({ user_id: user.id, phone, location, usage, power, characteristics, state: 'pending', remark })
+      .select()
+      .single();
+
+    if (clientError) throw clientError;
+
+    res.status(201).json(formatClient({ ...client, login, first_name: firstName, last_name: lastName }));
+  } catch (err) {
+    console.error('Add client error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
-  } finally {
-    client.release();
   }
 });
 
@@ -62,27 +61,27 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { firstName, lastName, phone, location, usage, power, characteristics, state, remark } = req.body;
 
-    const result = await pool.query(
-      `UPDATE clients SET phone=$1, location=$2, usage=$3, power=$4,
-              characteristics=$5, state=$6, remark=$7
-       WHERE id=$8 RETURNING *`,
-      [phone, location, usage, power, characteristics, state, remark, id]
-    );
+    const { data: client, error } = await supabase
+      .from('clients')
+      .update({ phone, location, usage, power, characteristics, state, remark })
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
+    if (error) throw error;
+    if (!client) return res.status(404).json({ error: 'Client non trouvé' });
 
-    // Also update user names if provided
     if (firstName || lastName) {
-      await pool.query(
-        `UPDATE users SET first_name=COALESCE($1, first_name), last_name=COALESCE($2, last_name)
-         WHERE id=$3`,
-        [firstName, lastName, result.rows[0].user_id]
-      );
+      await supabase
+        .from('users')
+        .update({
+          ...(firstName && { first_name: firstName }),
+          ...(lastName && { last_name: lastName }),
+        })
+        .eq('id', client.user_id);
     }
 
-    res.json(formatClient(result.rows[0]));
+    res.json(formatClient(client));
   } catch (err) {
     console.error('Update client error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -92,11 +91,16 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/clients/:id
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM clients WHERE id=$1 RETURNING user_id', [req.params.id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
-    await pool.query('DELETE FROM users WHERE id=$1', [result.rows[0].user_id]);
+    const { data: client, error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', req.params.id)
+      .select('user_id')
+      .single();
+
+    if (error || !client) return res.status(404).json({ error: 'Client non trouvé' });
+
+    await supabase.from('users').delete().eq('id', client.user_id);
     res.json({ success: true });
   } catch (err) {
     console.error('Delete client error:', err);
@@ -107,16 +111,15 @@ router.delete('/:id', async (req, res) => {
 // GET /api/clients/:id/installation
 router.get('/:id/installation', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT c.*, u.login, u.first_name, u.last_name
-       FROM clients c JOIN users u ON c.user_id = u.id
-       WHERE c.id=$1`,
-      [req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.json(null);
-    }
-    res.json(formatClient(result.rows[0]));
+    const { data: client, error } = await supabase
+      .from('clients')
+      .select('*, users(login, first_name, last_name)')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !client) return res.json(null);
+
+    res.json(formatClient({ ...client, ...client.users }));
   } catch (err) {
     console.error('Get installation error:', err);
     res.status(500).json({ error: 'Erreur serveur' });

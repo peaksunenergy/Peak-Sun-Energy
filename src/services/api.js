@@ -1,13 +1,31 @@
 import { API_URL } from '../constants/apiConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ============================================================
-// Service API — Appels HTTP vers le backend Express + PostgreSQL
+// Service API — Appels HTTP vers le backend Express + Supabase
 // ============================================================
+
+async function getToken() {
+  try {
+    const stored = await AsyncStorage.getItem('currentUser');
+    if (stored) {
+      const user = JSON.parse(stored);
+      return user.token;
+    }
+  } catch (_) {}
+  return null;
+}
 
 async function request(path, options = {}) {
+  const token = await getToken();
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
