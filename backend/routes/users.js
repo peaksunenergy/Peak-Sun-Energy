@@ -45,36 +45,22 @@ router.get('/technicians/stats', async (_req, res) => {
 
     if (claimError) throw claimError;
 
-    // Get all history actions by technicians
-    const { data: history, error: histError } = await supabase
-      .from('claim_history')
-      .select('claim_id, performed_by, action, to_value');
-
-    if (histError) throw histError;
-
     const stats = techs.map(tech => {
       // Currently assigned to this tech
       const assigned = claims.filter(c => c.assigned_to === tech.id);
       const currentInProgress = assigned.filter(c => c.status === 'in_progress' || c.status === 'created');
 
-      // Resolved by this tech (from history: status_change to 'resolved' performed by this tech)
-      const resolvedByTech = history.filter(h =>
-        h.performed_by === tech.id &&
-        h.action === 'status_change' &&
-        h.to_value === 'resolved'
-      );
-
-      // Interventions = number of tickets resolved by this tech
-      const totalInterventions = resolvedByTech.length;
+      // Currently resolved (based on current claim status, not history)
+      const currentlyResolved = assigned.filter(c => c.status === 'resolved');
 
       return {
         id: String(tech.id),
         firstName: tech.first_name,
         lastName: tech.last_name,
         totalAssigned: assigned.length,
-        resolved: resolvedByTech.length,
+        resolved: currentlyResolved.length,
         inProgress: currentInProgress.length,
-        totalInterventions: totalInterventions,
+        totalInterventions: currentlyResolved.length,
       };
     });
 
