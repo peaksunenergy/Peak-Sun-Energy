@@ -72,16 +72,37 @@ router.put('/:id', async (req, res) => {
     if (!client) return res.status(404).json({ error: 'Client non trouvé' });
 
     if (firstName || lastName) {
+      const nameUpdates = {
+        ...(firstName && { first_name: firstName }),
+        ...(lastName && { last_name: lastName }),
+      };
       await supabase
         .from('users')
-        .update({
-          ...(firstName && { first_name: firstName }),
-          ...(lastName && { last_name: lastName }),
-        })
+        .update(nameUpdates)
         .eq('id', client.user_id);
+
+      // Cascade: update client_name on all linked claims
+      const { data: userData } = await supabase
+        .from('users')
+        .select('first_name, last_name')
+        .eq('id', client.user_id)
+        .single();
+      if (userData) {
+        const fullName = `${userData.first_name} ${userData.last_name}`;
+        await supabase
+          .from('claims')
+          .update({ client_name: fullName })
+          .eq('client_id', id);
+      }
     }
 
-    res.json(formatClient(client));
+    // Re-fetch with user data for response
+    const { data: updated } = await supabase
+      .from('clients')
+      .select('*, users(login, first_name, last_name)')
+      .eq('id', id)
+      .single();
+    res.json(formatClient({ ...updated, ...updated.users }));
   } catch (err) {
     console.error('Update client error:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -91,6 +112,22 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/clients/:id
 router.delete('/:id', async (req, res) => {
   try {
+    // Delete linked claim_history entries first (via claims)
+    const { data: claimRows } = await supabase
+      .from('claims')
+      .select('id')
+      .eq('client_id', req.params.id);
+
+    if (claimRows && claimRows.length > 0) {
+      const claimIds = claimRows.map(c => c.id);
+      await supabase.from('claim_history').delete().in('claim_id', claimIds);
+      await supabase.from('notifications').delete().in('claim_id', claimIds);
+    }
+
+    // Delete claims linked to this client
+    await supabase.from('claims').delete().eq('client_id', req.params.id);
+
+    // Delete client row and get user_id
     const { data: client, error } = await supabase
       .from('clients')
       .delete()
@@ -100,6 +137,7 @@ router.delete('/:id', async (req, res) => {
 
     if (error || !client) return res.status(404).json({ error: 'Client non trouvé' });
 
+    // Delete user account
     await supabase.from('users').delete().eq('id', client.user_id);
     res.json({ success: true });
   } catch (err) {
@@ -108,13 +146,13 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// GET /api/clients/:id/installation
+// GET /api/clients/:id/installation — :id is the user_id (from auth)
 router.get('/:id/installation', async (req, res) => {
   try {
     const { data: client, error } = await supabase
       .from('clients')
       .select('*, users(login, first_name, last_name)')
-      .eq('id', req.params.id)
+      .eq('user_id', parseInt(req.params.id))
       .single();
 
     if (error || !client) return res.json(null);

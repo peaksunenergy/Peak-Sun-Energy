@@ -39,15 +39,20 @@ export default function AdminClientManagementScreen({ navigation }) {
   function handleDelete(client) {
     Alert.alert(
       'Supprimer le client',
-      `Voulez-vous vraiment supprimer ${client.firstName} ${client.lastName} ?`,
+      `Voulez-vous vraiment supprimer ${client.firstName} ${client.lastName} ?\nCela supprimera aussi ses réclamations.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Supprimer',
           style: 'destructive',
           onPress: async () => {
-            await deleteClient(client.id);
-            loadClients();
+            try {
+              await deleteClient(client.id);
+              Alert.alert('Supprimé', 'Client supprimé avec succès');
+              loadClients();
+            } catch (e) {
+              Alert.alert('Erreur', e.message || 'Impossible de supprimer le client');
+            }
           },
         },
       ]

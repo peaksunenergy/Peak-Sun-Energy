@@ -32,12 +32,14 @@ export default function AdminDashboardScreen({ navigation }) {
         getQuoteRequests(),
         checkOverdueClaims(),
       ]);
+      const unresolvedClaims = claims.filter((c) => c.status !== 'resolved');
       setStats({
         clients: clients.length,
         claims: claims.length,
-        pendingClaims: claims.filter((c) => c.status === 'created').length,
+        pendingClaims: unresolvedClaims.length,
         quoteRequests: quotes.length,
         overdueClaims: overdue.length,
+        unresolvedList: unresolvedClaims.slice(0, 5),
       });
     } catch (e) {
       // ignore
@@ -67,7 +69,7 @@ export default function AdminDashboardScreen({ navigation }) {
     {
       icon: 'alert-circle',
       title: 'Réclamations',
-      subtitle: `${stats.pendingClaims} en attente`,
+      subtitle: `${stats.pendingClaims} non résolue(s)`,
       color: COLORS.danger,
       screen: 'AdminClaims',
     },
@@ -78,7 +80,16 @@ export default function AdminDashboardScreen({ navigation }) {
       color: COLORS.primary,
       screen: 'AdminQuotes',
     },
+    {
+      icon: 'stats-chart',
+      title: 'Stats techniciens',
+      subtitle: 'Performance et tickets résolus',
+      color: COLORS.success,
+      screen: 'AdminTechStats',
+    },
   ];
+
+  const { unresolvedList = [] } = stats;
 
   return (
     <ScrollView
@@ -131,6 +142,29 @@ export default function AdminDashboardScreen({ navigation }) {
             <Text style={styles.statLabel}>Devis</Text>
           </View>
         </View>
+
+        {/* Réclamations non résolues */}
+        {unresolvedList.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={[styles.menuTitle, { marginBottom: 10, fontSize: 16 }]}>Réclamations non résolues</Text>
+            {unresolvedList.map((claim) => (
+              <TouchableOpacity
+                key={claim.id}
+                style={[styles.menuItem, { borderLeftWidth: 3, borderLeftColor: claim.status === 'created' ? COLORS.danger : COLORS.primary }]}
+                onPress={() => navigation.navigate('AdminClaims')}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.menuTitle}>#{claim.id} — {claim.clientName}</Text>
+                  <Text style={styles.menuSubtitle} numberOfLines={1}>{claim.description}</Text>
+                  <Text style={{ fontSize: 11, color: claim.status === 'created' ? COLORS.danger : COLORS.primary, fontWeight: '600', marginTop: 4 }}>
+                    {claim.status === 'created' ? '🔴 Non consultée' : '🟠 En traitement'}
+                    {claim.assignedName ? ` — ${claim.assignedName}` : ''}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Menu */}
         {menuItems.map((item, i) => (

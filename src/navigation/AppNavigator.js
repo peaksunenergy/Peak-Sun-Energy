@@ -23,6 +23,11 @@ import AdminClientManagementScreen from '../screens/admin/AdminClientManagementS
 import AdminAddClientScreen from '../screens/admin/AdminAddClientScreen';
 import AdminClaimManagementScreen from '../screens/admin/AdminClaimManagementScreen';
 import AdminQuoteRequestsScreen from '../screens/admin/AdminQuoteRequestsScreen';
+import AdminTechStatsScreen from '../screens/admin/AdminTechStatsScreen';
+
+// Technician screens
+import TechDashboardScreen from '../screens/tech/TechDashboardScreen';
+import TechClaimsScreen from '../screens/tech/TechClaimsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -60,6 +65,16 @@ function AdminStack() {
       />
       <Stack.Screen name="AdminClaims" component={AdminClaimManagementScreen} />
       <Stack.Screen name="AdminQuotes" component={AdminQuoteRequestsScreen} />
+      <Stack.Screen name="AdminTechStats" component={AdminTechStatsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function TechStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="TechDashboard" component={TechDashboardScreen} />
+      <Stack.Screen name="TechClaims" component={TechClaimsScreen} />
     </Stack.Navigator>
   );
 }
@@ -81,6 +96,8 @@ export default function AppNavigator() {
         <PublicStack />
       ) : user.role === 'admin' ? (
         <AdminStack />
+      ) : user.role === 'technician' ? (
+        <TechStack />
       ) : (
         <ClientStack />
       )}

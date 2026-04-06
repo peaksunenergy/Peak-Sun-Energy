@@ -16,7 +16,13 @@ export function AuthProvider({ children }) {
     try {
       const storedUser = await AsyncStorage.getItem('currentUser');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        // If stored user has no token (old session), force re-login
+        if (!parsed.token) {
+          await AsyncStorage.removeItem('currentUser');
+        } else {
+          setUser(parsed);
+        }
       }
     } catch (e) {
       // Ignorer l'erreur de chargement

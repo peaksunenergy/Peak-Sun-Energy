@@ -9,7 +9,16 @@ Application de gestion pour **Peak Sun Energy** — une entreprise d'installatio
 - Gestion des clients (ajout, modification, suppression)
 - Suivi des demandes de devis
 - Gestion des réclamations (techniques et administratives)
-- Notifications automatiques (réclamations non traitées > 48h)
+- **Assignation** des réclamations aux techniciens
+- **Historique complet** de chaque réclamation (audit trail)
+- **Statistiques techniciens** : tickets assignés, résolus, en cours, taux de résolution
+- **Escalade automatique** : notifications + e-mail pour les réclamations non résolues > 48h
+
+### Espace Technicien
+- Tableau de bord avec réclamations assignées
+- Changement de statut des réclamations (en cours, résolu)
+- **Transfert** d'une réclamation à un autre technicien (avec motif)
+- Historique des interventions et transferts
 
 ### Espace Client
 - Suivi de l'état de l'installation
@@ -31,18 +40,21 @@ Peak-Sun-Energy/
 ├── src/
 │   ├── components/           # Composants réutilisables
 │   ├── constants/            # Configuration, couleurs, constantes
-│   ├── context/              # AuthContext (gestion de session)
-│   ├── navigation/           # React Navigation (tabs + stacks)
-│   ├── screens/              # Écrans (admin/, client/, publics)
+│   ├── context/              # AuthContext (gestion de session JWT)
+│   ├── navigation/           # React Navigation (stacks par rôle)
+│   ├── screens/              # Écrans (admin/, client/, tech/, publics)
 │   ├── services/api.js       # Appels HTTP vers le backend
 │   └── utils/validators.js   # Validation de formulaires
 ├── backend/
-│   ├── server.js             # Serveur Express
-│   ├── db/pool.js            # Connexion PostgreSQL (Supabase)
+│   ├── server.js             # Serveur Express (JWT, CORS, rate-limit)
+│   ├── middleware/auth.js     # JWT auth + requireRole
+│   ├── db/pool.js            # Client Supabase (@supabase/supabase-js)
+│   ├── services/email.js     # Envoi e-mail d'escalade (nodemailer)
 │   └── routes/               # Routes API REST
 │       ├── auth.js           # POST /api/auth/login
 │       ├── clients.js        # CRUD /api/clients
-│       ├── claims.js         # CRUD /api/claims
+│       ├── claims.js         # CRUD /api/claims (assign, forward, history)
+│       ├── users.js          # GET /api/users/technicians (list + stats)
 │       ├── quotes.js         # GET|POST /api/quotes
 │       ├── contact.js        # GET|POST /api/contact
 │       └── notifications.js  # GET|POST /api/notifications
@@ -57,8 +69,10 @@ Peak-Sun-Energy/
 | Mobile/Web  | React Native + Expo (SDK 55)             |
 | Navigation  | React Navigation 7                       |
 | Backend     | Node.js + Express                        |
-| Base de données | PostgreSQL via **Supabase**           |
-| Auth        | bcrypt (hash de mots de passe)           |
+| Base de données | PostgreSQL via **Supabase** (@supabase/supabase-js) |
+| Auth        | JWT (jsonwebtoken) + bcrypt              |
+| Sécurité    | CORS, express-rate-limit, requireRole    |
+| E-mail      | nodemailer (escalade 48h)                |
 
 ---
 
@@ -150,6 +164,32 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 ```
 
+Puis exécutez la migration pour les fonctionnalités technicien / audit trail :
+
+```sql
+-- Ajout des champs assignation + escalade sur la table claims
+ALTER TABLE claims
+  ADD COLUMN IF NOT EXISTS assigned_to INT REFERENCES users(id),
+  ADD COLUMN IF NOT EXISTS assigned_name VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS escalated BOOLEAN DEFAULT FALSE;
+
+-- Table d'historique / audit trail
+CREATE TABLE IF NOT EXISTS claim_history (
+  id             SERIAL PRIMARY KEY,
+  claim_id       INT NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+  action         VARCHAR(50) NOT NULL,
+  from_value     VARCHAR(100),
+  to_value       VARCHAR(100),
+  performed_by   INT REFERENCES users(id),
+  performer_name VARCHAR(200),
+  note           TEXT,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_claim_history_claim_id ON claim_history(claim_id);
+CREATE INDEX IF NOT EXISTS idx_claims_assigned_to ON claims(assigned_to);
+```
+
 ### 3. Configurer le backend
 
 ```bash
@@ -166,8 +206,17 @@ cp .env.example .env
 Éditez `.env` avec vos informations Supabase :
 
 ```env
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...your-service-role-key
+JWT_SECRET=your-random-hex-secret-here
 PORT=3000
+
+# Optionnel — pour les e-mails d'escalade
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+ADMIN_EMAIL=admin@peaksunenergy.tn
 ```
 
 Démarrez le serveur :
@@ -204,36 +253,41 @@ npx expo start --android  # émulateur Android / appareil
 
 ## 📡 API Endpoints
 
-| Méthode | Route                        | Description                    |
-|---------|------------------------------|--------------------------------|
-| POST    | `/api/auth/login`            | Connexion utilisateur          |
-| GET     | `/api/clients`               | Liste des clients              |
-| POST    | `/api/clients`               | Ajouter un client              |
-| PUT     | `/api/clients/:id`           | Modifier un client             |
-| DELETE  | `/api/clients/:id`           | Supprimer un client            |
-| GET     | `/api/clients/:id/installation` | Détails installation client |
-| GET     | `/api/claims`                | Toutes les réclamations        |
-| GET     | `/api/claims/client/:id`     | Réclamations d'un client       |
-| POST    | `/api/claims`                | Créer une réclamation          |
-| PUT     | `/api/claims/:id/status`     | Modifier statut réclamation    |
-| GET     | `/api/claims/overdue`        | Réclamations > 48h non traitées|
-| GET     | `/api/quotes`                | Liste des demandes de devis    |
-| POST    | `/api/quotes`                | Soumettre une demande de devis |
-| GET     | `/api/contact`               | Messages de contact            |
-| POST    | `/api/contact`               | Envoyer un message de contact  |
-| GET     | `/api/notifications`         | Liste des notifications        |
-| POST    | `/api/notifications`         | Créer une notification         |
-| GET     | `/api/health`                | Vérification de santé du serveur|
+| Méthode | Route                          | Auth     | Description                            |
+|---------|--------------------------------|----------|----------------------------------------|
+| POST    | `/api/auth/login`              | Non      | Connexion utilisateur (retourne JWT)   |
+| GET     | `/api/clients`                 | Admin    | Liste des clients                      |
+| POST    | `/api/clients`                 | Admin    | Ajouter un client                      |
+| PUT     | `/api/clients/:id`             | Admin    | Modifier un client                     |
+| DELETE  | `/api/clients/:id`             | Admin    | Supprimer un client                    |
+| GET     | `/api/clients/:id/installation`| JWT      | Détails installation client            |
+| GET     | `/api/claims`                  | JWT      | Toutes les réclamations                |
+| GET     | `/api/claims/client/:id`       | JWT      | Réclamations d'un client               |
+| GET     | `/api/claims/assigned/:techId` | JWT      | Réclamations assignées à un technicien |
+| GET     | `/api/claims/:id/history`      | JWT      | Historique/audit d'une réclamation     |
+| POST    | `/api/claims`                  | JWT      | Créer une réclamation                  |
+| PUT     | `/api/claims/:id/status`       | JWT      | Modifier statut (avec note optionnelle)|
+| PUT     | `/api/claims/:id/assign`       | Admin    | Assigner à un technicien               |
+| PUT     | `/api/claims/:id/forward`      | Tech     | Transférer à un autre technicien       |
+| GET     | `/api/claims/overdue`          | Admin    | Réclamations > 48h (+ e-mail escalade) |
+| GET     | `/api/users/technicians`       | JWT      | Liste des techniciens                  |
+| GET     | `/api/users/technicians/stats` | Admin    | Statistiques par technicien            |
+| GET     | `/api/quotes`                  | JWT      | Liste des demandes de devis            |
+| POST    | `/api/quotes`                  | Non      | Soumettre une demande de devis         |
+| GET     | `/api/contact`                 | JWT      | Messages de contact                    |
+| POST    | `/api/contact`                 | Non      | Envoyer un message de contact          |
+| GET     | `/api/notifications`           | JWT      | Liste des notifications                |
+| POST    | `/api/notifications`           | JWT      | Créer une notification                 |
 
 ---
 
 ## 👤 Rôles utilisateur
 
-| Rôle        | Accès                                           |
-|-------------|--------------------------------------------------|
-| `admin`     | Tableau de bord, gestion clients/réclamations/devis |
-| `technician`| Notifications réclamations techniques             |
-| `client`    | Suivi installation, soumission de réclamations    |
+| Rôle         | Accès                                                         |
+|--------------|---------------------------------------------------------------|
+| `admin`      | Tableau de bord, gestion clients/réclamations/devis, assignation, stats techniciens, escalade |
+| `technician` | Réclamations assignées, changement de statut, transfert entre techniciens |
+| `client`     | Suivi installation, soumission et suivi de réclamations       |
 
 ---
 
@@ -250,7 +304,8 @@ npx eas build --platform android --profile production     # AAB pour Play Store
 ### Déploiement backend
 
 Le backend peut être déployé sur n'importe quelle plateforme Node.js (Render, Railway, Fly.io, VPS...).
-Définissez les variables d'environnement `DATABASE_URL` et `PORT` sur la plateforme choisie.
+Définissez les variables d'environnement `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `JWT_SECRET` et `PORT` sur la plateforme choisie.
+Pour l'escalade e-mail, ajoutez aussi `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `ADMIN_EMAIL`.
 
 ---
 

@@ -1,7 +1,8 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const authRoutes = require('./routes/auth');
 const clientsRoutes = require('./routes/clients');
@@ -9,7 +10,8 @@ const claimsRoutes = require('./routes/claims');
 const quotesRoutes = require('./routes/quotes');
 const contactRoutes = require('./routes/contact');
 const notificationsRoutes = require('./routes/notifications');
-const { authMiddleware } = require('./middleware/auth');
+const usersRoutes = require('./routes/users');
+const { authMiddleware, requireRole } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/clients', authMiddleware, clientsRoutes);
 app.use('/api/claims', authMiddleware, claimsRoutes);
 app.use('/api/notifications', authMiddleware, notificationsRoutes);
+app.use('/api/users', authMiddleware, usersRoutes);
 
 // Root route
 app.get('/', (_req, res) => res.json({ name: 'Peak Sun Energy API', status: 'ok' }));

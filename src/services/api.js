@@ -101,11 +101,45 @@ export async function submitClaim(claimData) {
   });
 }
 
-export async function updateClaimStatus(claimId, newStatus) {
+export async function updateClaimStatus(claimId, newStatus, note) {
   return request(`/claims/${claimId}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ status: newStatus }),
+    body: JSON.stringify({ status: newStatus, note }),
   });
+}
+
+// ---------- Assignation / Transfert ----------
+
+export async function assignClaim(claimId, technicianId, technicianName, note) {
+  return request(`/claims/${claimId}/assign`, {
+    method: 'PUT',
+    body: JSON.stringify({ technicianId, technicianName, note }),
+  });
+}
+
+export async function forwardClaim(claimId, technicianId, technicianName, reason) {
+  return request(`/claims/${claimId}/forward`, {
+    method: 'PUT',
+    body: JSON.stringify({ technicianId, technicianName, reason }),
+  });
+}
+
+export async function getAssignedClaims(techId) {
+  return request(`/claims/assigned/${techId}`);
+}
+
+export async function getClaimHistory(claimId) {
+  return request(`/claims/${claimId}/history`);
+}
+
+// ---------- Techniciens ----------
+
+export async function getTechnicians() {
+  return request('/users/technicians');
+}
+
+export async function getTechnicianStats() {
+  return request('/users/technicians/stats');
 }
 
 // ---------- Vérification 48h ----------
