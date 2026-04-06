@@ -7,6 +7,7 @@ import {
   Alert,
   StyleSheet,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,26 +38,39 @@ export default function AdminClientManagementScreen({ navigation }) {
   }
 
   function handleDelete(client) {
-    Alert.alert(
-      'Supprimer le client',
-      `Voulez-vous vraiment supprimer ${client.firstName} ${client.lastName} ?\nCela supprimera aussi ses réclamations.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteClient(client.id);
-              Alert.alert('Supprimé', 'Client supprimé avec succès');
-              loadClients();
-            } catch (e) {
-              Alert.alert('Erreur', e.message || 'Impossible de supprimer le client');
-            }
-          },
-        },
-      ]
-    );
+    const doDelete = async () => {
+      try {
+        await deleteClient(client.id);
+        setClients(prev => prev.filter(c => c.id !== client.id));
+        if (Platform.OS === 'web') {
+          window.alert('Client supprimé avec succès');
+        } else {
+          Alert.alert('Supprimé', 'Client supprimé avec succès');
+        }
+      } catch (e) {
+        const msg = e.message || 'Impossible de supprimer le client';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Erreur', msg);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Voulez-vous vraiment supprimer ${client.firstName} ${client.lastName} ?\nCela supprimera aussi ses réclamations.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Supprimer le client',
+        `Voulez-vous vraiment supprimer ${client.firstName} ${client.lastName} ?\nCela supprimera aussi ses réclamations.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Supprimer', style: 'destructive', onPress: doDelete },
+        ]
+      );
+    }
   }
 
   function renderClient({ item }) {

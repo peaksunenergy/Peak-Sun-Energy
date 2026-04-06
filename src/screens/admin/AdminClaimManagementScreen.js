@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -54,21 +55,35 @@ export default function AdminClaimManagementScreen({ navigation }) {
   }
 
   function handleReopen(claim) {
-    Alert.alert('Réouvrir', 'Réouvrir cette réclamation ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Confirmer',
-        onPress: async () => {
-          try {
-            await updateClaimStatus(claim.id, 'in_progress', 'Réouverte par l\'admin');
-            Alert.alert('Succès', 'Réclamation réouverte');
-            loadClaims();
-          } catch (e) {
-            Alert.alert('Erreur', e.message || 'Impossible de réouvrir');
-          }
-        },
-      },
-    ]);
+    const doReopen = async () => {
+      try {
+        await updateClaimStatus(claim.id, 'in_progress', 'Réouverte par l\'admin');
+        if (Platform.OS === 'web') {
+          window.alert('Réclamation réouverte');
+        } else {
+          Alert.alert('Succès', 'Réclamation réouverte');
+        }
+        loadClaims();
+      } catch (e) {
+        const msg = e.message || 'Impossible de réouvrir';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Erreur', msg);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Réouvrir cette réclamation ?')) {
+        doReopen();
+      }
+    } else {
+      Alert.alert('Réouvrir', 'Réouvrir cette réclamation ?', [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Confirmer', onPress: doReopen },
+      ]);
+    }
   }
 
   async function openAssignModal(claimId) {
