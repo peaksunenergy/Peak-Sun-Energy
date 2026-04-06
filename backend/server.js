@@ -46,6 +46,9 @@ app.use('/api/clients', authMiddleware, clientsRoutes);
 app.use('/api/claims', authMiddleware, claimsRoutes);
 app.use('/api/notifications', authMiddleware, notificationsRoutes);
 
+// Root route
+app.get('/', (_req, res) => res.json({ name: 'Peak Sun Energy API', status: 'ok' }));
+
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
