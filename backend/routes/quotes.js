@@ -22,10 +22,21 @@ router.get('/', async (_req, res) => {
 // POST /api/quotes
 router.post('/', async (req, res) => {
   try {
-    const { fullName, email, phone, clientType, message } = req.body;
+    const { firstName, lastName, phone, clientType, serviceType, location, power, stegAmount, stegPower } = req.body;
     const { data, error } = await supabase
       .from('quote_requests')
-      .insert({ full_name: fullName, email, phone, client_type: clientType, message, status: 'pending' })
+      .insert({
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+        client_type: clientType,
+        service_type: serviceType,
+        location,
+        power,
+        steg_amount: stegAmount,
+        steg_power: stegPower,
+        status: 'pending',
+      })
       .select()
       .single();
 
@@ -40,11 +51,15 @@ router.post('/', async (req, res) => {
 function formatQuote(row) {
   return {
     id: String(row.id),
-    fullName: row.full_name,
-    email: row.email,
+    firstName: row.first_name,
+    lastName: row.last_name,
     phone: row.phone,
     clientType: row.client_type,
-    message: row.message,
+    serviceType: row.service_type,
+    location: row.location,
+    power: row.power,
+    stegAmount: row.steg_amount,
+    stegPower: row.steg_power,
     status: row.status,
     createdAt: row.created_at,
   };
