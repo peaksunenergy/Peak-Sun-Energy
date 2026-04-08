@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SHADOWS } from '../../constants/colors';
-import { getQuoteRequests, updateQuoteStatus, assignQuote, getTechnicians } from '../../services/api';
+import { getQuoteRequests, updateQuoteStatus, assignQuote, getTechnicians, deleteQuote } from '../../services/api';
 import { CLIENT_TYPES, SERVICE_TYPES, QUOTE_STATES } from '../../constants/config';
 import { QuoteStatusBadge } from '../../components/StatusBadge';
 import Header from '../../components/Header';
 import { useToast } from '../../components/Toast';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminQuoteRequestsScreen({ navigation }) {
@@ -72,6 +73,16 @@ export default function AdminQuoteRequestsScreen({ navigation }) {
     }
     setModalType(null);
     setSelectedQuote(null);
+  }
+
+  async function handleDelete(quoteId) {
+    try {
+      await deleteQuote(quoteId);
+      setRequests((prev) => prev.filter((q) => q.id !== quoteId));
+      toast('Devis supprimé');
+    } catch (e) {
+      toast(e.message, 'error');
+    }
   }
 
   function renderRequest({ item }) {
@@ -133,6 +144,12 @@ export default function AdminQuoteRequestsScreen({ navigation }) {
             onPress={() => { setSelectedQuote(item); setModalType('assign'); }}
           >
             <Text style={[styles.actionText, styles.actionTextSecondary]}>Assigner</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDelete(item.id)}
+          >
+            <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -302,6 +319,16 @@ const styles = StyleSheet.create({
   },
   actionTextSecondary: {
     color: COLORS.primary,
+  },
+  deleteBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.danger + '40',
+    backgroundColor: COLORS.danger + '10',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   empty: {
     alignItems: 'center',

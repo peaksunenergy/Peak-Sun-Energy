@@ -32,7 +32,5 @@ export const CLAIM_TYPES = [
 export const QUOTE_STATES = [
   { label: 'En attente', value: 'pending', color: '#F59E0B' },
   { label: 'En cours', value: 'in_progress', color: '#3B82F6' },
-  { label: 'Devis envoyé', value: 'sent', color: '#8B5CF6' },
-  { label: 'Accepté', value: 'accepted', color: '#22C55E' },
-  { label: 'Refusé', value: 'rejected', color: '#EF4444' },
+  { label: 'Traité', value: 'treated', color: '#22C55E' },
 ];

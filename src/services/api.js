@@ -75,6 +75,10 @@ export async function assignQuote(quoteId, assignedTo, assignedName) {
   });
 }
 
+export async function deleteQuote(quoteId) {
+  return request(`/quotes/${quoteId}`, { method: 'DELETE' });
+}
+
 // ---------- Contact ----------
 
 export async function submitContactMessage(data) {

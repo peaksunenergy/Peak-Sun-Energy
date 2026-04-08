@@ -33,11 +33,13 @@ export default function AdminDashboardScreen({ navigation }) {
         checkOverdueClaims(),
       ]);
       const unresolvedClaims = claims.filter((c) => c.status !== 'resolved');
+      const treatedQuotes = quotes.filter((q) => q.status === 'treated').length;
       setStats({
         clients: clients.length,
         claims: claims.length,
         pendingClaims: unresolvedClaims.length,
         quoteRequests: quotes.length,
+        treatedQuotes,
         overdueClaims: overdue.length,
         unresolvedList: unresolvedClaims.slice(0, 5),
       });
@@ -76,7 +78,7 @@ export default function AdminDashboardScreen({ navigation }) {
     {
       icon: 'document-text',
       title: 'Demandes de devis',
-      subtitle: `${stats.quoteRequests} demande(s)`,
+      subtitle: `${stats.quoteRequests} demande(s) · ${stats.treatedQuotes || 0} traité(s)`,
       color: COLORS.primary,
       screen: 'AdminQuotes',
     },

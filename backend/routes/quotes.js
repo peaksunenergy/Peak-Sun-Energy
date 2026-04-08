@@ -105,6 +105,22 @@ router.put('/:id/assign', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE /api/quotes/:id
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('quote_requests')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+    res.json({ message: 'Devis supprimé' });
+  } catch (err) {
+    console.error('Delete quote error:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 function formatQuote(row) {
   return {
     id: String(row.id),
