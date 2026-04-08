@@ -20,6 +20,23 @@ router.get('/', async (_req, res) => {
   }
 });
 
+// GET /api/quotes/assigned/:userId — quotes assigned to a specific user
+router.get('/assigned/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('*')
+      .eq('assigned_to', req.params.userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data.map(formatQuote));
+  } catch (err) {
+    console.error('Get assigned quotes error:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // POST /api/quotes
 router.post('/', async (req, res) => {
   try {
@@ -73,18 +90,24 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
 router.put('/:id/assign', authMiddleware, async (req, res) => {
   try {
     const { assignedTo, assignedName } = req.body;
+
+    // Block assigning to the same person
+    const { data: current } = await supabase
+      .from('quote_requests')
+      .select('status, assigned_to')
+      .eq('id', req.params.id)
+      .single();
+
+    if (current && current.assigned_to === parseInt(assignedTo)) {
+      return res.status(400).json({ error: 'Ce devis est déjà assigné à cette personne' });
+    }
+
     const updates = {
       assigned_to: parseInt(assignedTo),
       assigned_name: assignedName,
       updated_at: new Date().toISOString(),
     };
     // Auto move to in_progress if still pending
-    const { data: current } = await supabase
-      .from('quote_requests')
-      .select('status')
-      .eq('id', req.params.id)
-      .single();
-
     if (current && current.status === 'pending') {
       updates.status = 'in_progress';
     }

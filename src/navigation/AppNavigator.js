@@ -30,6 +30,7 @@ import AdminTechStatsScreen from '../screens/admin/AdminTechStatsScreen';
 // Technician screens
 import TechDashboardScreen from '../screens/tech/TechDashboardScreen';
 import TechClaimsScreen from '../screens/tech/TechClaimsScreen';
+import TechQuotesScreen from '../screens/tech/TechQuotesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -79,6 +80,7 @@ function TechStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="TechDashboard" component={TechDashboardScreen} />
       <Stack.Screen name="TechClaims" component={TechClaimsScreen} />
+      <Stack.Screen name="TechQuotes" component={TechQuotesScreen} />
     </Stack.Navigator>
   );
 }

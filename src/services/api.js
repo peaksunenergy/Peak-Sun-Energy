@@ -61,6 +61,10 @@ export async function getQuoteRequests() {
   return request('/quotes');
 }
 
+export async function getAssignedQuotes(userId) {
+  return request(`/quotes/assigned/${userId}`);
+}
+
 export async function updateQuoteStatus(quoteId, status) {
   return request(`/quotes/${quoteId}/status`, {
     method: 'PUT',

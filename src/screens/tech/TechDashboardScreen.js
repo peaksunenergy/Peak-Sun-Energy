@@ -6,18 +6,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SHADOWS } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
-import { getAssignedClaims } from '../../services/api';
+import { getAssignedClaims, getAssignedQuotes } from '../../services/api';
 
 export default function TechDashboardScreen({ navigation }) {
   const { user, logout } = useAuth();
   const [claims, setClaims] = useState([]);
+  const [assignedQuotes, setAssignedQuotes] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await getAssignedClaims(user.id);
-      setClaims(data);
+      const [claimsData, quotesData] = await Promise.all([
+        getAssignedClaims(user.id),
+        getAssignedQuotes(user.id).catch(() => []),
+      ]);
+      setClaims(claimsData);
+      setAssignedQuotes(quotesData);
     } catch (_) {}
   }, [user]);
 
@@ -31,6 +36,7 @@ export default function TechDashboardScreen({ navigation }) {
 
   const pending = claims.filter(c => c.status === 'created' || c.status === 'in_progress');
   const resolved = claims.filter(c => c.status === 'resolved');
+  const pendingQuotes = assignedQuotes.filter(q => q.status !== 'treated');
 
   return (
     <ScrollView
@@ -58,8 +64,8 @@ export default function TechDashboardScreen({ navigation }) {
             <Text style={styles.statLabel}>Résolues</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#EFF6FF' }]}>
-            <Text style={[styles.statNumber, { color: COLORS.secondaryLight }]}>{claims.length}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={[styles.statNumber, { color: COLORS.secondaryLight }]}>{pendingQuotes.length}</Text>
+            <Text style={styles.statLabel}>Devis</Text>
           </View>
         </View>
 
@@ -73,6 +79,20 @@ export default function TechDashboardScreen({ navigation }) {
           <View style={styles.menuText}>
             <Text style={styles.menuTitle}>Mes réclamations</Text>
             <Text style={styles.menuSubtitle}>{pending.length} en attente de traitement</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={COLORS.grayMedium} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('TechQuotes')}
+        >
+          <View style={[styles.menuIcon, { backgroundColor: COLORS.primary + '15' }]}>
+            <Ionicons name="document-text" size={24} color={COLORS.primary} />
+          </View>
+          <View style={styles.menuText}>
+            <Text style={styles.menuTitle}>Mes devis</Text>
+            <Text style={styles.menuSubtitle}>{pendingQuotes.length} devis à traiter</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={COLORS.grayMedium} />
         </TouchableOpacity>

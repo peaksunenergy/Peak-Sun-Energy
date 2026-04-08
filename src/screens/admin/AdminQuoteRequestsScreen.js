@@ -208,18 +208,24 @@ export default function AdminQuoteRequestsScreen({ navigation }) {
         <Pressable style={styles.overlay} onPress={() => setModalType(null)}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Assigner à</Text>
-            {assigneeList.map((a) => (
-              <TouchableOpacity
-                key={a.id}
-                style={[
-                  styles.modalOption,
-                  selectedQuote?.assignedTo === a.id && { backgroundColor: COLORS.primaryLight + '40' },
-                ]}
-                onPress={() => handleAssign(a.id, a.name)}
-              >
-                <Text style={styles.modalOptionText}>👤 {a.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {assigneeList.map((a) => {
+              const isAlreadyAssigned = String(selectedQuote?.assignedTo) === String(a.id);
+              return (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[
+                    styles.modalOption,
+                    isAlreadyAssigned && { backgroundColor: COLORS.grayLight, opacity: 0.5 },
+                  ]}
+                  onPress={() => !isAlreadyAssigned && handleAssign(a.id, a.name)}
+                  disabled={isAlreadyAssigned}
+                >
+                  <Text style={styles.modalOptionText}>
+                    👤 {a.name}{isAlreadyAssigned ? ' (déjà assigné)' : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
             <TouchableOpacity style={styles.modalCancel} onPress={() => setModalType(null)}>
               <Text style={styles.modalCancelText}>Annuler</Text>
             </TouchableOpacity>
