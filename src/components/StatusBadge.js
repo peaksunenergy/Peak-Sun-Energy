@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { CLAIM_STATES, INSTALLATION_STATES } from '../constants/config';
+import { CLAIM_STATES, INSTALLATION_STATES, QUOTE_STATES } from '../constants/config';
 
 export function ClaimStatusBadge({ status }) {
   const state = CLAIM_STATES.find((s) => s.value === status) || CLAIM_STATES[0];
@@ -14,6 +14,16 @@ export function ClaimStatusBadge({ status }) {
 
 export function InstallationStatusBadge({ status }) {
   const state = INSTALLATION_STATES.find((s) => s.value === status) || INSTALLATION_STATES[0];
+  return (
+    <View style={[styles.badge, { backgroundColor: state.color + '20' }]}>
+      <View style={[styles.dot, { backgroundColor: state.color }]} />
+      <Text style={[styles.text, { color: state.color }]}>{state.label}</Text>
+    </View>
+  );
+}
+
+export function QuoteStatusBadge({ status }) {
+  const state = QUOTE_STATES.find((s) => s.value === status) || QUOTE_STATES[0];
   return (
     <View style={[styles.badge, { backgroundColor: state.color + '20' }]}>
       <View style={[styles.dot, { backgroundColor: state.color }]} />

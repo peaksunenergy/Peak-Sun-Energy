@@ -1,5 +1,6 @@
 const express = require('express');
 const supabase = require('../db/pool');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -48,6 +49,62 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/quotes/:id/status — update quote status
+router.put('/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Devis non trouvé' });
+    res.json(formatQuote(data));
+  } catch (err) {
+    console.error('Update quote status error:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/quotes/:id/assign — assign quote to technician or admin
+router.put('/:id/assign', authMiddleware, async (req, res) => {
+  try {
+    const { assignedTo, assignedName } = req.body;
+    const updates = {
+      assigned_to: parseInt(assignedTo),
+      assigned_name: assignedName,
+      updated_at: new Date().toISOString(),
+    };
+    // Auto move to in_progress if still pending
+    const { data: current } = await supabase
+      .from('quote_requests')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (current && current.status === 'pending') {
+      updates.status = 'in_progress';
+    }
+
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Devis non trouvé' });
+    res.json(formatQuote(data));
+  } catch (err) {
+    console.error('Assign quote error:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 function formatQuote(row) {
   return {
     id: String(row.id),
@@ -61,7 +118,10 @@ function formatQuote(row) {
     stegAmount: row.steg_amount,
     stegPower: row.steg_power,
     status: row.status,
+    assignedTo: row.assigned_to ? String(row.assigned_to) : null,
+    assignedName: row.assigned_name || null,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

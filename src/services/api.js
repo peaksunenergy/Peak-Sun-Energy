@@ -61,6 +61,20 @@ export async function getQuoteRequests() {
   return request('/quotes');
 }
 
+export async function updateQuoteStatus(quoteId, status) {
+  return request(`/quotes/${quoteId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function assignQuote(quoteId, assignedTo, assignedName) {
+  return request(`/quotes/${quoteId}/assign`, {
+    method: 'PUT',
+    body: JSON.stringify({ assignedTo, assignedName }),
+  });
+}
+
 // ---------- Contact ----------
 
 export async function submitContactMessage(data) {
