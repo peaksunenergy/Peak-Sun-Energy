@@ -68,6 +68,10 @@ export default function LoginScreen({ navigation }) {
           disabled={loading}
         />
 
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.forgotLink}>Mot de passe oublié ?</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.registerLink}>Pas encore de compte ? Créer un compte</Text>
         </TouchableOpacity>
@@ -94,11 +98,17 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     lineHeight: 18,
   },
+  forgotLink: {
+    fontSize: 13,
+    color: COLORS.gray,
+    textAlign: 'center',
+    marginTop: 16,
+  },
   registerLink: {
     fontSize: 14,
     color: COLORS.primary,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: 12,
     fontWeight: '600',
   },
 });

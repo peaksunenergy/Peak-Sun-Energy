@@ -96,4 +96,31 @@ async function sendVerificationEmail(email, firstName, token) {
   console.log(`Verification email sent to ${email}`);
 }
 
-module.exports = { sendEscalationEmail, sendVerificationEmail };
+async function sendPasswordResetEmail(email, firstName, token) {
+  const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const resetUrl = `${baseUrl}/api/auth/reset-password?token=${token}`;
+
+  await sendEmail({
+    to: email,
+    subject: 'Réinitialisation de mot de passe — Peak Sun Energy',
+    html: `
+      <div style="font-family:Arial,sans-serif; max-width:500px; margin:0 auto;">
+        <h2 style="color:#F97316;">Réinitialisation de mot de passe</h2>
+        <p>Bonjour ${firstName},</p>
+        <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+        <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
+        <div style="text-align:center; margin:24px 0;">
+          <a href="${resetUrl}" style="background:#F97316; color:#fff; padding:12px 32px; border-radius:8px; text-decoration:none; font-weight:bold;">
+            Réinitialiser mon mot de passe
+          </a>
+        </div>
+        <p style="color:#888; font-size:12px;">Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
+        <p style="color:#888; font-size:12px;">— Peak Sun Energy</p>
+      </div>
+    `,
+  });
+
+  console.log(`Password reset email sent to ${email}`);
+}
+
+module.exports = { sendEscalationEmail, sendVerificationEmail, sendPasswordResetEmail };

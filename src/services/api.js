@@ -43,6 +43,13 @@ export async function registerUser(data) {
   });
 }
 
+export async function forgotPassword(email) {
+  return request('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function submitQuoteRequest(data) {
   return request('/quotes', {
     method: 'POST',
