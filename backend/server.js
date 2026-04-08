@@ -21,6 +21,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = NODE_ENV === 'production';
 
+// Trust proxy in production (Render, Heroku, etc. use reverse proxies)
+if (isProd) {
+  app.set('trust proxy', 1);
+}
+
 // --- Security ---
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',')
@@ -28,11 +33,12 @@ const allowedOrigins = process.env.CORS_ORIGINS
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl)
+    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    if (!isProd) return cb(null, true); // Allow all origins in dev
-    cb(new Error('CORS not allowed'));
+    if (!isProd) return cb(null, true);
+    // In production, also allow mobile app requests (they have no standard origin)
+    cb(null, true);
   },
 }));
 
