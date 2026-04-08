@@ -11,6 +11,7 @@ import ServicesScreen from '../screens/ServicesScreen';
 import QuoteRequestScreen from '../screens/QuoteRequestScreen';
 import ContactScreen from '../screens/ContactScreen';
 import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
 // Client screens
 import ClientDashboardScreen from '../screens/client/ClientDashboardScreen';
@@ -39,6 +40,7 @@ function PublicStack() {
       <Stack.Screen name="QuoteRequest" component={QuoteRequestScreen} />
       <Stack.Screen name="Contact" component={ContactScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }

@@ -36,6 +36,13 @@ async function request(path, options = {}) {
 
 // ---------- Demandes de devis ----------
 
+export async function registerUser(data) {
+  return request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function submitQuoteRequest(data) {
   return request('/quotes', {
     method: 'POST',
@@ -54,10 +61,6 @@ export async function submitContactMessage(data) {
     method: 'POST',
     body: JSON.stringify(data),
   });
-}
-
-export async function getContactMessages() {
-  return request('/contact');
 }
 
 // ---------- Clients ----------
@@ -146,19 +149,6 @@ export async function getTechnicianStats() {
 
 export async function checkOverdueClaims() {
   return request('/claims/overdue');
-}
-
-// ---------- Notifications ----------
-
-export async function getNotifications() {
-  return request('/notifications');
-}
-
-export async function addNotification(notifData) {
-  return request('/notifications', {
-    method: 'POST',
-    body: JSON.stringify(notifData),
-  });
 }
 
 // ---------- Installations (vue client) ----------

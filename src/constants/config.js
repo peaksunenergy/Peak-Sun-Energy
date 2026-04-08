@@ -28,6 +28,3 @@ export const CLAIM_TYPES = [
   { label: 'Technique', value: 'technical' },
   { label: 'Administrative', value: 'administrative' },
 ];
-
-// Délai d'alerte automatique (48 heures en ms)
-export const CLAIM_ALERT_DELAY_MS = 48 * 60 * 60 * 1000;

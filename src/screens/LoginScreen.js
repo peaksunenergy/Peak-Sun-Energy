@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
@@ -68,11 +68,9 @@ export default function LoginScreen({ navigation }) {
           disabled={loading}
         />
 
-        <Text style={styles.hint}>
-          Comptes de démo :{'\n'}
-          Admin : admin / admin123{'\n'}
-          Client : client1 / client123
-        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.registerLink}>Pas encore de compte ? Créer un compte</Text>
+        </TouchableOpacity>
       </KeyboardAvoidingView>
     </View>
   );
@@ -96,11 +94,11 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     lineHeight: 18,
   },
-  hint: {
-    fontSize: 11,
-    color: COLORS.grayMedium,
+  registerLink: {
+    fontSize: 14,
+    color: COLORS.primary,
     textAlign: 'center',
     marginTop: 24,
-    lineHeight: 18,
+    fontWeight: '600',
   },
 });

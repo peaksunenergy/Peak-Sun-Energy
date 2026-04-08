@@ -55,3 +55,23 @@ export function validateClaimForm(form) {
     errors,
   };
 }
+
+export function validateRegisterForm(form) {
+  const errors = {};
+
+  if (!validateRequired(form.firstName)) errors.firstName = 'Le prénom est requis';
+  if (!validateRequired(form.lastName)) errors.lastName = 'Le nom est requis';
+  if (!validateRequired(form.email)) errors.email = "L'email est requis";
+  else if (!validateEmail(form.email)) errors.email = 'Email invalide';
+  if (!validateRequired(form.phone)) errors.phone = 'Le téléphone est requis';
+  else if (!validatePhone(form.phone)) errors.phone = 'Numéro invalide (8 chiffres)';
+  if (!validateRequired(form.role)) errors.role = 'Le type de compte est requis';
+  if (!validateRequired(form.password)) errors.password = 'Le mot de passe est requis';
+  else if (form.password.length < 6) errors.password = 'Minimum 6 caractères';
+  if (form.password !== form.confirmPassword) errors.confirmPassword = 'Les mots de passe ne correspondent pas';
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}

@@ -2,7 +2,11 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+// Load environment-specific .env file
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const envFile = NODE_ENV === 'production' ? '.env.production' : '.env';
+require('dotenv').config({ path: path.join(__dirname, envFile) });
 
 const authRoutes = require('./routes/auth');
 const clientsRoutes = require('./routes/clients');
@@ -11,10 +15,11 @@ const quotesRoutes = require('./routes/quotes');
 const contactRoutes = require('./routes/contact');
 const notificationsRoutes = require('./routes/notifications');
 const usersRoutes = require('./routes/users');
-const { authMiddleware, requireRole } = require('./middleware/auth');
+const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = NODE_ENV === 'production';
 
 // --- Security ---
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -24,17 +29,19 @@ const allowedOrigins = process.env.CORS_ORIGINS
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (mobile apps, curl)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(null, true); // In dev, allow all; tighten in production
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (!isProd) return cb(null, true); // Allow all origins in dev
+    cb(new Error('CORS not allowed'));
   },
 }));
 
 app.use(express.json({ limit: '5mb' }));
 
-// Rate limiting: 100 requests per 15 min per IP
+// Rate limiting — stricter in production
 app.use('/api/', rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isProd ? 100 : 500,
   message: { error: 'Trop de requêtes, réessayez plus tard' },
 }));
 
@@ -56,5 +63,5 @@ app.get('/', (_req, res) => res.json({ name: 'Peak Sun Energy API', status: 'ok'
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT} [${NODE_ENV}]`);
 });
