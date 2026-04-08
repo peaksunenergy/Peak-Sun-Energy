@@ -52,6 +52,7 @@ export default function TechQuotesScreen({ navigation }) {
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
+            <Text style={styles.info}>📧 {item.email}</Text>
             <Text style={styles.info}>📞 {item.phone}</Text>
             <Text style={styles.info}>📍 {item.location}</Text>
           </View>

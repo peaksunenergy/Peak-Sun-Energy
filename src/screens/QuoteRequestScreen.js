@@ -20,6 +20,7 @@ export default function QuoteRequestScreen({ navigation }) {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+    email: '',
     phone: '',
     clientType: '',
     serviceType: '',
@@ -94,6 +95,15 @@ export default function QuoteRequestScreen({ navigation }) {
           value={form.lastName}
           onChangeText={(v) => updateField('lastName', v)}
           error={errors.lastName}
+        />
+        <FormInput
+          label="Email"
+          placeholder="votre@email.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={form.email}
+          onChangeText={(v) => updateField('email', v)}
+          error={errors.email}
         />
         <FormInput
           label="Téléphone"

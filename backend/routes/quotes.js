@@ -40,12 +40,19 @@ router.get('/assigned/:userId', authMiddleware, async (req, res) => {
 // POST /api/quotes
 router.post('/', async (req, res) => {
   try {
-    const { firstName, lastName, phone, clientType, serviceType, location, power, stegAmount, stegPower } = req.body;
+    const { firstName, lastName, email, phone, clientType, serviceType, location, power, stegAmount, stegPower } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !phone || !clientType || !serviceType || !location || !power) {
+      return res.status(400).json({ error: 'Tous les champs obligatoires doivent être remplis' });
+    }
+
     const { data, error } = await supabase
       .from('quote_requests')
       .insert({
         first_name: firstName,
         last_name: lastName,
+        email,
         phone,
         client_type: clientType,
         service_type: serviceType,
@@ -149,6 +156,7 @@ function formatQuote(row) {
     id: String(row.id),
     firstName: row.first_name,
     lastName: row.last_name,
+    email: row.email || null,
     phone: row.phone,
     clientType: row.client_type,
     serviceType: row.service_type,

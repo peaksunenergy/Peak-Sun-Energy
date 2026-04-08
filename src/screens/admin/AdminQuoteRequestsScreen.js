@@ -96,6 +96,7 @@ export default function AdminQuoteRequestsScreen({ navigation }) {
             <Text style={styles.name}>
               {item.firstName} {item.lastName}
             </Text>
+            <Text style={styles.info}>📧 {item.email}</Text>
             <Text style={styles.info}>📞 {item.phone}</Text>
             <Text style={styles.info}>📍 {item.location}</Text>
           </View>

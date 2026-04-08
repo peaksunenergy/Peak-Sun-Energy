@@ -17,6 +17,8 @@ export function validateQuoteForm(form) {
 
   if (!validateRequired(form.firstName)) errors.firstName = 'Le prénom est requis';
   if (!validateRequired(form.lastName)) errors.lastName = 'Le nom est requis';
+  if (!validateRequired(form.email)) errors.email = "L'email est requis";
+  else if (!validateEmail(form.email)) errors.email = 'Email invalide';
   if (!validateRequired(form.phone)) errors.phone = 'Le téléphone est requis';
   else if (!validatePhone(form.phone)) errors.phone = 'Numéro invalide (8 chiffres)';
   if (!validateRequired(form.clientType)) errors.clientType = 'Le type de client est requis';
